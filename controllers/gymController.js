@@ -31,10 +31,6 @@ exports.createGym = async (req, res, next) => {
     try {
         // Save the gym admin user
         await gymAdmin.save();
-        let gymMemberships = [];
-        if (franchiseId) {
-            gymMemberships = await Membership.find({ franchise: franchiseId }).select('_id'); // Get memberships for the franchise
-        }
         // Initialize gym details
         let gymName = name; // Default name from request
         let gymLogo = logo; // Default logo from request
@@ -87,9 +83,12 @@ exports.getGyms = async (req, res, next) => {
     try {
         const gyms = await Gym.find()
             .populate('gymAdmin')
-            .populate('franchise');
+            .populate('franchise')
+            .populate('membershipPlans'); // Populate membershipPlans
+
         res.status(200).json(gyms);
     } catch (error) {
         next(error); // Pass error to error handling middleware
     }
 };
+

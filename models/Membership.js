@@ -8,7 +8,8 @@ const MembershipSchema = new mongoose.Schema({
     signupFee: { type: Number, required: true },
     description: { type: String, required: true },
     image: { type: String }, // URL to the membership image
-    franchise: { type: mongoose.Schema.Types.ObjectId, ref: 'Franchise', required: false } // Reference to Franchise
+    franchise: { type: mongoose.Schema.Types.ObjectId, ref: 'Franchise', required: false }, // Reference to Franchise,
+    gymId: { type: mongoose.Schema.Types.ObjectId, ref: 'Gym', required: true }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Membership', MembershipSchema);
