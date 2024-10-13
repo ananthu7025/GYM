@@ -1,8 +1,11 @@
 const User = require('../models/User');
+const Franchise = require('../models/Franchise');
+const Gym = require('../models/Gym');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const Member = require('../models/Member');
 const Trainer = require('../models/Trainer');
+const Roles = require('../enums/rolesEnum');
 // Register user
 exports.register = async (req, res, next) => {
     const { name, email, password, role } = req.body;
@@ -41,7 +44,7 @@ exports.login = async (req, res, next) => {
     }
 };
 
-exports.getUserDetails = async (req, res,next) => {
+exports.getUserDetails = async (req, res, next) => {
     // Extract token from the authorization header
     const token = req.headers.authorization?.split(' ')[1];
 
@@ -61,15 +64,35 @@ exports.getUserDetails = async (req, res,next) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Fetch additional details based on user role
+        // Initialize variable for additional details
         let additionalDetails = null;
-        if (userRole === 1) { // Member
-            additionalDetails = await Member.findOne({ email: user.email }).populate('gym');
-        } else if (userRole === 2) { // Trainer
-            additionalDetails = await Trainer.findOne({ email: user.email }).populate('gym');
+
+        // Fetch additional details based on user role
+        if (userRole === Roles.SUPER_ADMIN) {
+            // No additional details for SUPER_ADMIN, just return basic user details
+            additionalDetails = { message: 'Super Admin has no additional details' };
+        } else if (userRole === Roles.FRANCHISE_ADMIN) {
+            // Franchise Admin: fetch details of the franchise and associated gyms
+            const franchiseDetails = await Franchise.findOne({ franchiseAdmin: userId });
+            if (franchiseDetails) {
+                const associatedGyms = await Gym.find({ franchise: franchiseDetails._id });
+                additionalDetails = {
+                    franchiseDetails,
+                    associatedGyms
+                };
+            }
+        } else if (userRole === Roles.GYM_ADMIN) {
+            // Gym Admin: fetch details of the gym they are managing
+            additionalDetails = await Gym.findOne({ gymAdmin: userId });
+        } else if (userRole === Roles.TRAINER) {
+            // Trainer: fetch trainer details and associated gym
+            additionalDetails = await Trainer.findOne({ user: userId }).populate('gym');
+        } else if (userRole === Roles.MEMBER) {
+            // Member: fetch member details and associated gym
+            additionalDetails = await Member.findOne({ user: userId }).populate('gym');
         }
 
-        // Return user details along with additional details
+        // Return user details along with role-specific additional details
         res.status(200).json({
             user: {
                 id: user._id,

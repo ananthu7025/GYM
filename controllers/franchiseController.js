@@ -1,21 +1,23 @@
 const Franchise = require('../models/Franchise');
 const User = require('../models/User');
 const { sendEmail } = require('../services/mailer');
-
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 // Create franchise with franchiseAdmin
 exports.createFranchise = async (req, res, next) => {
     const { name, address, city, state, zipCode, country, phone, email, website, establishedYear, description, logo, franchiseAdminData } = req.body;
-
+console.log(franchiseAdminData)
     // Validate input data
     if (!name || !franchiseAdminData || !franchiseAdminData.email || !franchiseAdminData.password) {
         return res.status(400).json({ message: 'Name, franchise admin email, and password are required.' });
     }
+    const hashedPassword = await bcrypt.hash(franchiseAdminData.password, 10);
 
     // Create a new user for franchise admin
     const franchiseAdmin = new User({ 
         name: franchiseAdminData.name, 
         email: franchiseAdminData.email, 
-        password: franchiseAdminData.password, 
+        password: hashedPassword, 
         role: 2 // Franchise Admin role
     });
 
@@ -86,7 +88,7 @@ exports.updateFranchise = async (req, res, next) => {
         if (!updatedFranchise) {
             return res.status(404).json({ message: 'Franchise not found.' });
         }
-        res.status(200).json({ message: 'Franchise updated successfully', franchise: updatedFranchise });
+        res.status(200).json({ message: 'Franchise updated successfully', franchise: updatedFranchise,saveStatus: true });
     } catch (error) {
         next(error); // Pass error to error handling middleware
     }

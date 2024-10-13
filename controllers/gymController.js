@@ -1,8 +1,10 @@
 const Gym = require('../models/Gym');
 const User = require('../models/User');
 const { sendEmail } = require('../services/mailer');
-const { GymStatus } = require('../enums/commonEnum'); // Import GymStatus enum
+const { GymStatus } = require('../enums/commonEnum');
 const Franchise = require('../models/Franchise');
+const Roles = require('../enums/rolesEnum');
+const jwt = require('jsonwebtoken');
 
 // Create gym with gymAdmin
 exports.createGym = async (req, res, next) => {
@@ -17,10 +19,12 @@ exports.createGym = async (req, res, next) => {
         state, 
         zipCode, 
         country,
+        phone,
+        website,
+        email,
         logo
     } = req.body;
-
-    // Create a new user for gym admin
+    console.log(gymAdminData)
     const gymAdmin = new User({
         name: gymAdminData.name,
         email: gymAdminData.email,
@@ -29,36 +33,37 @@ exports.createGym = async (req, res, next) => {
     });
 
     try {
-        // Save the gym admin user
         await gymAdmin.save();
-        // Initialize gym details
-        let gymName = name; // Default name from request
-        let gymLogo = logo; // Default logo from request
 
-        // If a franchiseId is provided, fetch the franchise details
+        let gymName = name;
+        let gymLogo = logo;
+        let gymWebsite = website;
         if (franchiseId) {
-            const franchise = await Franchise.findById(franchiseId).select('name logo'); // Select only necessary fields
+            const franchise = await Franchise.findById(franchiseId).select('name logo website');
 
             if (franchise) {
-                gymName = franchise.name; // Use franchise name
-                gymLogo = franchise.logo; // Use franchise logo
+                gymName = franchise.name;
+                gymLogo = franchise.logo;
+                gymWebsite = franchise.website;
             }
         }
 
-        // Create and save the gym
         const newGym = new Gym({
             name: gymName,
             gymAdmin: gymAdmin._id,
-            franchise: franchiseId || null, // Handle optional franchise
+            franchise: franchiseId || null,
             openingHours,
             closingHours,
+            phone,
             address,
             city,
             state,
             zipCode,
             country,
-            logo: gymLogo, // Save the selected logo
-            status: GymStatus.ACTIVE // Set default status
+            website: gymWebsite || website,
+            email,
+            logo: gymLogo || logo,
+            status: GymStatus.ACTIVE
         });
         await newGym.save();
 
@@ -68,27 +73,105 @@ exports.createGym = async (req, res, next) => {
             saveStatus: true 
         });
 
-        // Send email to the gym admin
         const subject = 'Gym Admin Account Created';
         const text = `Hi ${gymAdminData.name},\n\nYour gym admin account has been created successfully. Your login details are as follows:\nEmail: ${gymAdminData.email}\nPassword: ${gymAdminData.password}\n\nThank you for joining!`;
         await sendEmail(gymAdminData.email, subject, text);
     } catch (error) {
-        next(error); // Pass error to error handling middleware
+        next(error);
     }
 };
 
-
-// Get all gyms
 exports.getGyms = async (req, res, next) => {
     try {
-        const gyms = await Gym.find()
-            .populate('gymAdmin')
-            .populate('franchise')
-            .populate('membershipPlans'); // Populate membershipPlans
+        const token = req.headers.authorization.split(' ')[1]; 
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET); 
+        
+        const userRole = decodedToken.role; 
+        const userId = decodedToken.id; 
+
+        let gyms;
+
+        if (userRole === Roles.FRANCHISE_ADMIN) {
+            const franchise = await Franchise.findOne({ franchiseAdmin: userId });
+
+            if (!franchise) {
+                return res.status(404).json({ message: 'Franchise not found.' });
+            }
+            gyms = await Gym.find({ franchise: franchise._id })
+                .populate('gymAdmin')
+                .populate('franchise')
+                .populate('membershipPlans');
+        } else {
+            gyms = await Gym.find()
+                .populate('gymAdmin')
+                .populate('franchise')
+                .populate('membershipPlans');
+        }
 
         res.status(200).json(gyms);
     } catch (error) {
-        next(error); // Pass error to error handling middleware
+        next(error);
     }
 };
 
+// Get gym by ID
+exports.getGymById = async (req, res, next) => {
+    const { gymId } = req.params;
+
+    try {
+        const gym = await Gym.findById(gymId)
+            .populate('gymAdmin')
+            .populate('franchise')
+            .populate('membershipPlans');
+
+        if (!gym) {
+            return res.status(404).json({ message: 'Gym not found' });
+        }
+
+        res.status(200).json(gym);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Update gym
+exports.updateGym = async (req, res, next) => {
+    const { gymId } = req.params;
+    const updateData = req.body;
+
+    try {
+        const updatedGym = await Gym.findByIdAndUpdate(gymId, updateData, { new: true })
+            .populate('gymAdmin')
+            .populate('franchise')
+            .populate('membershipPlans');
+
+        if (!updatedGym) {
+            return res.status(404).json({ message: 'Gym not found' });
+        }
+
+        res.status(200).json({ 
+            message: 'Gym updated successfully', 
+            gym: updatedGym ,
+            saveStatus: true 
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Delete gym
+exports.deleteGym = async (req, res, next) => {
+    const { gymId } = req.params;
+
+    try {
+        const deletedGym = await Gym.findByIdAndDelete(gymId);
+
+        if (!deletedGym) {
+            return res.status(404).json({ message: 'Gym not found' });
+        }
+
+        res.status(200).json({ message: 'Gym deleted successfully',saveStatus:true });
+    } catch (error) {
+        next(error);
+    }
+};

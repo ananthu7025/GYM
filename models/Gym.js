@@ -6,6 +6,9 @@ const gymSchema = new mongoose.Schema({
     name: { type: String, required: true },
     franchise: { type: mongoose.Schema.Types.ObjectId, ref: 'Franchise', required: false }, // Optional for independent gyms
     gymAdmin: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    email: { type: String },
+    website: { type: String },
+    phone: { type: String },
     openingHours: { type: String },
     closingHours: { type: String },
     membershipPlans: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Membership' }], // Ref to Membership
