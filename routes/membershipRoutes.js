@@ -17,5 +17,5 @@ router.put('/:id', membershipController.updateMembership);
 
 // Delete a membership
 router.delete('/:id', membershipController.deleteMembership);
-
+router.post('/bulk-import', membershipController.bulkImportMemberships);
 module.exports = router;

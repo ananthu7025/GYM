@@ -1,15 +1,26 @@
 // models/Membership.js
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const MembershipSchema = new mongoose.Schema({
+const MembershipSchema = new mongoose.Schema(
+  {
     name: { type: String, required: true },
-    period: { type: String, required: true }, // e.g., '1 Month', '6 Months', '1 Year'
+    period: { type: String, required: true },
     amount: { type: Number, required: true },
     signupFee: { type: Number, required: true },
     description: { type: String, required: true },
-    image: { type: String }, // URL to the membership image
-    franchiseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Franchise', required: false }, // Reference to Franchise,
-    gymId: { type: mongoose.Schema.Types.ObjectId, ref: 'Gym', required: true }
-}, { timestamps: true });
+    image: { type: String },
+    franchiseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Franchise",
+      required: false,
+    },
+    gymId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Gym",
+      required: false,
+    },
+  },
+  { timestamps: true }
+);
 
-module.exports = mongoose.model('Membership', MembershipSchema);
+module.exports = mongoose.model("Membership", MembershipSchema);
