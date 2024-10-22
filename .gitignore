@@ -9,11 +9,6 @@ npm-debug.log*
 # Environment variables
 .env
 
-# Build output
-dist/
-build/
-out/
-
 # Temporary files
 *.tmp
 *.temp
